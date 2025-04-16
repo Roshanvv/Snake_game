@@ -1,0 +1,165 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <windows.h>
+
+int i, j, height = 20, width = 20;
+int gameover, score;
+int x, y, fruitX, fruitY, flag;
+int tailX[100], tailY[100];
+int nTail = 0;
+int highScore = 0;
+
+void gotoxy(int x, int y) {
+    COORD coord = { x, y };
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
+
+void setColor(int color) {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+}
+
+void loadHighScore() {
+    FILE *file = fopen("highscore.txt", "r");
+    if (file != NULL) {
+        fscanf(file, "%d", &highScore);
+        fclose(file);
+    }
+}
+
+void saveHighScore() {
+    if (score > highScore) {
+        FILE *file = fopen("highscore.txt", "w");
+        if (file != NULL) {
+            fprintf(file, "%d", score);
+            fclose(file);
+        }
+    }
+}
+
+void setup() {
+    gameover = 0;
+    x = width / 2;
+    y = height / 2;
+    fruitX = rand() % width;
+    fruitY = rand() % height;
+    score = 0;
+    nTail = 0;
+    flag = 0;
+}
+
+void draw() {
+    system("cls");
+    setColor(11);
+    for (i = 0; i < width + 2; i++) printf("#");
+    printf("\n");
+
+    for (i = 0; i < height; i++) {
+        for (j = 0; j < width; j++) {
+            if (j == 0) printf("#");
+
+            if (i == y && j == x) {
+                setColor(14); printf("O"); setColor(11);
+            } else if (i == fruitY && j == fruitX) {
+                setColor(12); printf("F"); setColor(11);
+            } else {
+                int print = 0;
+                for (int k = 0; k < nTail; k++) {
+                    if (tailX[k] == j && tailY[k] == i) {
+                        setColor(10); printf("o"); setColor(11);
+                        print = 1;
+                    }
+                }
+                if (!print) printf(" ");
+            }
+
+            if (j == width - 1) printf("#");
+        }
+        printf("\n");
+    }
+
+    for (i = 0; i < width + 2; i++) printf("#");
+    printf("\nScore: %d\tHigh Score: %d\n", score, highScore);
+    setColor(15);
+}
+
+void input() {
+    if (_kbhit()) {
+        switch (_getch()) {
+        case 'a': flag = 1; break;
+        case 'd': flag = 2; break;
+        case 'w': flag = 3; break;
+        case 's': flag = 4; break;
+        case 'x': gameover = 1; break;
+        }
+    }
+}
+
+void logic() {
+    int prevX = tailX[0], prevY = tailY[0];
+    int prev2X, prev2Y;
+    tailX[0] = x;
+    tailY[0] = y;
+
+    for (int i = 1; i < nTail; i++) {
+        prev2X = tailX[i];
+        prev2Y = tailY[i];
+        tailX[i] = prevX;
+        tailY[i] = prevY;
+        prevX = prev2X;
+        prevY = prev2Y;
+    }
+
+    switch (flag) {
+    case 1: x--; break;
+    case 2: x++; break;
+    case 3: y--; break;
+    case 4: y++; break;
+    }
+
+    if (x < 0 || x >= width || y < 0 || y >= height)
+        gameover = 1;
+
+    for (int i = 0; i < nTail; i++)
+        if (tailX[i] == x && tailY[i] == y)
+            gameover = 1;
+
+    if (x == fruitX && y == fruitY) {
+        score += 10;
+        fruitX = rand() % width;
+        fruitY = rand() % height;
+        nTail++;
+    }
+}
+
+void gameOverScreen() {
+    system("cls");
+    setColor(12);
+    printf("\n\n\t===== GAME OVER =====\n");
+    setColor(15);
+    printf("\t Your Score     : %d\n", score);
+    printf("\t High Score     : %d\n", (score > highScore) ? score : highScore);
+    printf("\t======================\n\n");
+    setColor(14);
+    printf("\t Press 'r' to Replay or any other key to Exit...\n");
+    setColor(15);
+    saveHighScore();
+}
+
+int main() {
+    char choice;
+    loadHighScore();
+    do {
+        setup();
+        while (!gameover) {
+            draw();
+            input();
+            logic();
+            Sleep(100);
+        }
+        gameOverScreen();
+        choice = _getch();
+    } while (choice == 'r' || choice == 'R');
+
+    return 0;
+}
